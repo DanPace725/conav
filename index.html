@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Relational Coherence Navigator</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -43,7 +44,7 @@
         <div class="interpret-block">
           <h3>1. What is happening?</h3>
           <p>Describe the situation, event, conflict, or choice you're facing. Keep it concrete and specific.</p>
-          <p class="example"><em>Example: "I've been offered a promotion that requires relocating, but I just signed a lease and my partner's job is here."</em></p>
+          <p class="example"><em>Example: "My co-founder wants to pivot our startup into a completely different market, but we already have three paying clients and a product roadmap we shared with early investors."</em></p>
         </div>
 
         <div class="interpret-block">
@@ -54,13 +55,13 @@
             <li>Other people or groups involved</li>
             <li>Relevant responsibilities or commitments</li>
           </ul>
-          <p class="example"><em>Example: "Me (software engineer), my partner (teacher with tenure), my new manager who made the offer, and my current team I'd be leaving."</em></p>
+          <p class="example"><em>Example: "Me (CEO, responsible for product and client relationships), my co-founder (CTO, handles tech decisions), our three beta clients who trust our original vision, and the angel investors who backed us based on our initial pitch."</em></p>
         </div>
 
         <div class="interpret-block">
           <h3>3. Why this matters to you?</h3>
           <p>What are the stakes? What are you trying to achieve, protect, avoid, or maintain?</p>
-          <p class="example"><em>Example: "I want career growth but also stability with my partner. I'm worried about damaging my relationship or missing this opportunity."</em></p>
+          <p class="example"><em>Example: "I want to keep the partnership strong and stay open to better opportunities, but I also don't want to break our commitments to clients and investors. I'm worried that pivoting now will damage trust, but saying no might create conflict with my co-founder."</em></p>
         </div>
 
         <p><strong>Tip:</strong> Don't worry about having it all figured out—that's what this tool is for. Just give us the pieces you can see, and we'll help you spot the patterns.</p>
@@ -111,6 +112,38 @@
     <div id="app">
       <h1>Relational Coherence Navigator</h1>
 
+      <div class="input-mode-toggle">
+        <button id="toggleQuickForm" class="mode-toggle-btn">
+          <span class="toggle-text">Use Quick Form</span>
+          <span class="toggle-arrow">▼</span>
+        </button>
+      </div>
+
+      <div id="quickFormSection" class="quick-form-section collapsed">
+        <div class="quick-form-content">
+          <p class="form-intro">Answer these prompts to build your description:</p>
+          
+          <div class="form-field">
+            <label for="gf-what">What is happening?</label>
+            <textarea id="gf-what" placeholder="Describe the situation, event, conflict, or choice..."></textarea>
+          </div>
+
+          <div class="form-field">
+            <label for="gf-who">Who is involved?</label>
+            <textarea id="gf-who" placeholder="List the people, groups, roles, and responsibilities..."></textarea>
+          </div>
+
+          <div class="form-field">
+            <label for="gf-why">Why does this matter to you?</label>
+            <textarea id="gf-why" placeholder="What are you trying to achieve, protect, or maintain?"></textarea>
+          </div>
+
+          <button id="guidedCompose" type="button" class="compose-btn">
+            Send to Description ↓
+          </button>
+        </div>
+      </div>
+
       <textarea id="inputText" placeholder="Describe your situation here..."></textarea>
 
       <button id="evaluateBtn">Evaluate</button>
@@ -119,6 +152,12 @@
 
       <section id="results">
         <div class="results-main">
+          <div class="text-block" id="questionsBlock" style="display: none;">
+            <h3>Need More Information</h3>
+            <p class="questions-prompt">These details would help provide more accurate scores. Add them to your description above and click Evaluate again:</p>
+            <ul id="questionsList" class="questions-list"></ul>
+          </div>
+
           <div class="text-block">
             <h3>Dimension Notes</h3>
             <div id="explanationsList" class="explanations"></div>
@@ -132,12 +171,6 @@
           <div class="text-block">
             <h3>Recommendations</h3>
             <ul id="recommendationsList"></ul>
-          </div>
-
-          <div class="text-block" id="questionsBlock" style="display: none;">
-            <h3>Need More Information</h3>
-            <p class="questions-prompt">These details would help provide more accurate scores. Add them to your description above and click Evaluate again:</p>
-            <ul id="questionsList" class="questions-list"></ul>
           </div>
         </div>
 

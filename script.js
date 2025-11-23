@@ -11,6 +11,7 @@ window.addEventListener("DOMContentLoaded", function () {
   setupSidebarToggles();
   setupSidebarCollapse();
   setupThemeToggle();
+  setupQuickForm();
 });
 
 async function loadEnv() {
@@ -398,6 +399,7 @@ function setupThemeToggle() {
   });
 }
 
+
 function renderCompositeScore(scores) {
   const compositeBox = document.getElementById("compositeScore");
   if (!compositeBox) return;
@@ -444,4 +446,53 @@ function getCompositeInterpretation(band) {
     "Coherent": "The structure of the situation is solid, aligned, and supportive of forward movement."
   };
   return interpretations[band] || "";
+}
+
+function setupQuickForm() {
+  const toggleBtn = document.getElementById("toggleQuickForm");
+  const quickFormSection = document.getElementById("quickFormSection");
+  const composeBtn = document.getElementById("guidedCompose");
+  const toggleText = toggleBtn?.querySelector(".toggle-text");
+  const toggleArrow = toggleBtn?.querySelector(".toggle-arrow");
+  
+  if (!toggleBtn || !quickFormSection) return;
+
+  // Toggle quick form visibility
+  toggleBtn.addEventListener("click", () => {
+    const isCollapsed = quickFormSection.classList.toggle("collapsed");
+    
+    if (toggleText) {
+      toggleText.textContent = isCollapsed ? "Use Quick Form" : "Use Freeform Input";
+    }
+    if (toggleArrow) {
+      toggleArrow.textContent = isCollapsed ? "▼" : "▲";
+    }
+  });
+
+  // Compose description from form fields
+  if (composeBtn) {
+    composeBtn.addEventListener("click", () => {
+      const what = document.getElementById("gf-what")?.value.trim() || "";
+      const who = document.getElementById("gf-who")?.value.trim() || "";
+      const why = document.getElementById("gf-why")?.value.trim() || "";
+
+      const parts = [];
+      if (what) parts.push(what);
+      if (who) parts.push(who);
+      if (why) parts.push(why);
+
+      const composed = parts.join(" ");
+      
+      const mainTextarea = document.getElementById("inputText");
+      if (mainTextarea && composed) {
+        mainTextarea.value = composed;
+        mainTextarea.focus();
+        
+        // Collapse the form after composing
+        quickFormSection.classList.add("collapsed");
+        if (toggleText) toggleText.textContent = "Use Quick Form";
+        if (toggleArrow) toggleArrow.textContent = "▼";
+      }
+    });
+  }
 }

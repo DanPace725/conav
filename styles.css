@@ -198,7 +198,125 @@ body {
 
 #app h1 {
   margin-top: 0;
+  margin-bottom: 20px;
   font-size: 1.8em;
+}
+
+/* Input mode toggle */
+.input-mode-toggle {
+  margin-bottom: 12px;
+}
+
+.mode-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-toggle-btn:hover {
+  background: var(--border-color);
+  border-color: var(--accent-primary);
+}
+
+.toggle-arrow {
+  font-size: 0.8em;
+  transition: transform 0.3s ease;
+}
+
+/* Quick form section */
+.quick-form-section {
+  max-height: 600px;
+  overflow: hidden;
+  transition: max-height 0.4s ease, margin 0.4s ease, opacity 0.3s ease;
+  margin-bottom: 16px;
+  opacity: 1;
+}
+
+.quick-form-section.collapsed {
+  max-height: 0;
+  margin-bottom: 0;
+  opacity: 0;
+}
+
+.quick-form-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.form-intro {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.form-field {
+  margin-bottom: 12px;
+}
+
+.form-field:last-of-type {
+  margin-bottom: 14px;
+}
+
+.form-field label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+.form-field textarea {
+  width: 90%;
+  padding: 8px;
+  min-height: 50px;
+  max-height: 100px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.form-field textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.form-field textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.compose-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.compose-btn:hover {
+  background: var(--accent-hover);
 }
 
 textarea {
@@ -240,6 +358,7 @@ button {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  width: 100%;
 }
 
 #evaluateBtn:hover {
@@ -295,6 +414,7 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .score-label {
@@ -406,6 +526,51 @@ button {
   background: var(--bg-tertiary);
   border-radius: 6px;
   border-left: 3px solid var(--accent-primary);
+}
+
+.guided-form {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+}
+
+.guided-form h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.guided-form label {
+  display: block;
+  font-weight: 600;
+  margin: 10px 0 6px;
+}
+
+.guided-form textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+.secondary-btn {
+  margin-top: 12px;
+  background: transparent;
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background: rgba(42, 183, 202, 0.1);
 }
 
 /* Clarifying questions styling */
@@ -533,20 +698,21 @@ button {
 /* Responsive adjustments */
 @media (max-width: 1100px) {
   #results {
-    grid-template-columns: 1fr;
-  }
-  
-  .results-sidebar {
-    position: relative;
-    top: 0;
-    order: -1;
-    max-height: none;
-  }
+  grid-template-columns: 1fr;
+}
+
+.results-sidebar {
+  position: relative;
+  top: 0;
+  order: -1;
+  max-height: none;
+}
 }
 
 @media (max-width: 900px) {
   #layout {
     grid-template-columns: 1fr;
+    padding-top: 48px;
   }
   
   #sidebar {
@@ -556,6 +722,48 @@ button {
   }
   
   .sidebar-toggle {
-    position: absolute;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+  }
+
+  .theme-toggle {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+  }
+
+  #app {
+    padding-left: 0;
+  }
+
+  textarea {
+    height: 160px;
+  }
+}
+
+@media (max-width: 600px) {
+  #layout {
+    gap: 12px;
+  }
+
+  #sidebar .toggle {
+    grid-template-columns: 1fr;
+  }
+
+  .score-label {
+    width: 100%;
+  }
+
+  .score-value {
+    width: auto;
+  }
+
+  .results-sidebar, .results-main {
+    padding: 16px;
+  }
+
+  #app h1 {
+    font-size: 1.5em;
   }
 }
