@@ -66,6 +66,33 @@ This application cannot be run by simply opening `index.html` in a browser becau
 3. Click "Evaluate"
 4. You should see a JSON response with coherence scores across the five dimensions
 
+## Deployment to Vercel
+
+### Quick Deploy
+
+1. Push your code to a GitHub repository
+2. Import the project in [Vercel](https://vercel.com)
+3. Add your OpenAI API key as an environment variable:
+   - Go to Project Settings → Environment Variables
+   - Add: `OPENAI_API_KEY` = `your_openai_api_key_here`
+4. Deploy!
+
+### How It Works
+
+- **Local Development**: Uses `.env` file and direct OpenAI API calls
+- **Production (Vercel)**: Uses serverless function at `/api/evaluate` that securely accesses environment variables
+- The code automatically detects the environment and uses the appropriate method
+
+### Vercel Environment Variables
+
+In your Vercel project settings, add:
+
+| Name | Value |
+|------|-------|
+| `OPENAI_API_KEY` | Your OpenAI API key |
+
+Make sure to add it to all environments (Production, Preview, Development) as needed.
+
 ## Status
 
 Early prototype scaffolding.

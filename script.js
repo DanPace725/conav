@@ -55,14 +55,6 @@ async function evaluateCoherence() {
   setStatus("Evaluating...");
   clearResults();
 
-  const env = await loadEnv();
-  const apiKey = env.OPENAI_API_KEY || env.API_KEY;
-
-  if (!apiKey) {
-    setStatus("Error: Missing OPENAI_API_KEY in .env");
-    return;
-  }
-
   const profile = await loadProfile();
   if (!profile) {
     setStatus("Error: Could not load coherence profile");
@@ -72,25 +64,59 @@ async function evaluateCoherence() {
   const prompt = buildPrompt(text, profile);
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.2
-      })
-    });
+    // Try Vercel serverless function first (production), fall back to direct API (local dev)
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    
+    let response, data;
 
-    if (!response.ok) {
-      setStatus("Error: API request failed");
-      return;
+    if (isProduction) {
+      // Use Vercel serverless function
+      response = await fetch("/api/evaluate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setStatus(`Error: ${errorData.error || 'API request failed'}`);
+        return;
+      }
+
+      data = await response.json();
+    } else {
+      // Local development: use .env file and direct API call
+      const env = await loadEnv();
+      const apiKey = env.OPENAI_API_KEY || env.API_KEY;
+
+      if (!apiKey) {
+        setStatus("Error: Missing OPENAI_API_KEY in .env file");
+        return;
+      }
+
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.2
+        })
+      });
+
+      if (!response.ok) {
+        setStatus("Error: API request failed");
+        return;
+      }
+
+      data = await response.json();
     }
 
-    const data = await response.json();
     const textOutput = data.choices?.[0]?.message?.content ?? "{}";
     const parsed = tryParseJson(textOutput);
 
