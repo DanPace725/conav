@@ -1,0 +1,69 @@
+{
+  "dimensions": {
+    "continuity": {
+      "description": "Stability of identity, commitments, and long-term coherence.",
+      "markers_positive": [
+        "consistent with long-term goals",
+        "supports stability",
+        "avoids fragmentation"
+      ],
+      "markers_negative": [
+        "contradicts prior commitments",
+        "creates instability",
+        "sacrifices long-term integrity"
+      ]
+    },
+    "differentiation": {
+      "description": "Clarity of roles, boundaries, and responsibilities.",
+      "markers_positive": [
+        "clear boundaries",
+        "defined responsibilities",
+        "roles do not blur"
+      ],
+      "markers_negative": [
+        "boundary confusion",
+        "role conflicts",
+        "unclear responsibilities"
+      ]
+    },
+    "contextual_fit": {
+      "description": "Alignment of actions with the situation's real context.",
+      "markers_positive": [
+        "matches situational demands",
+        "appropriate timing",
+        "context-aware"
+      ],
+      "markers_negative": [
+        "misaligned with context",
+        "incorrect assumptions",
+        "poor timing"
+      ]
+    },
+    "accountability": {
+      "description": "Transparency, traceability, and clarity of consequences.",
+      "markers_positive": [
+        "visible causal pathways",
+        "transparent decisions",
+        "responsibility is clear"
+      ],
+      "markers_negative": [
+        "opaque motives",
+        "untraceable consequences",
+        "hidden information"
+      ]
+    },
+    "reflexivity": {
+      "description": "Capacity for flexible adjustment and safe revision.",
+      "markers_positive": [
+        "allows adjustment",
+        "supports feedback",
+        "stable under change"
+      ],
+      "markers_negative": [
+        "rigid patterns",
+        "no feedback loops",
+        "unsafe to revise"
+      ]
+    }
+  }
+}

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Relational Coherence Navigator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="layout">
+    <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+      <span class="toggle-icon">◀</span>
+    </button>
+    
+    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+      <span class="theme-icon">☀️</span>
+    </button>
+    
+    <aside id="sidebar">
+      <div class="toggle">
+        <button class="toggle-btn" data-target="aboutPanel">About</button>
+        <button class="toggle-btn" data-target="guidePanel">How to Use</button>
+        <button class="toggle-btn" data-target="interpretPanel">Scores</button>
+      </div>
+
+      <div id="aboutPanel" class="panel open">
+        <h2>About</h2>
+        <p>Welcome! This tool helps you see patterns in complex situations—whether you're facing a tough decision, navigating a relationship, or just trying to make sense of something that feels messy.</p>
+        <p>We'll explore your situation through five helpful lenses:</p>
+        <ul>
+          <li><strong>Continuity:</strong> Does this align with who you are and where you're going?</li>
+          <li><strong>Differentiation:</strong> Are roles and boundaries clear?</li>
+          <li><strong>Contextual Fit:</strong> Does this make sense for your actual situation?</li>
+          <li><strong>Accountability:</strong> Can you trace cause and effect?</li>
+          <li><strong>Reflexivity:</strong> Is there room to adjust and learn?</li>
+        </ul>
+        <p>This tool is a mirror, not a guide—it shows you structure so you can understand what's really happening.</p>
+      </div>
+
+      <div id="guidePanel" class="panel">
+        <h2>How to Use</h2>
+        <p>The more specific you are, the more useful your results will be. Try to include these three elements:</p>
+        
+        <div class="interpret-block">
+          <h3>1. What is happening?</h3>
+          <p>Describe the situation, event, conflict, or choice you're facing. Keep it concrete and specific.</p>
+          <p class="example"><em>Example: "I've been offered a promotion that requires relocating, but I just signed a lease and my partner's job is here."</em></p>
+        </div>
+
+        <div class="interpret-block">
+          <h3>2. Who is involved?</h3>
+          <p>Identify the people, groups, or relationships that matter here:</p>
+          <ul>
+            <li>Yourself and your role</li>
+            <li>Other people or groups involved</li>
+            <li>Relevant responsibilities or commitments</li>
+          </ul>
+          <p class="example"><em>Example: "Me (software engineer), my partner (teacher with tenure), my new manager who made the offer, and my current team I'd be leaving."</em></p>
+        </div>
+
+        <div class="interpret-block">
+          <h3>3. Why this matters to you?</h3>
+          <p>What are the stakes? What are you trying to achieve, protect, avoid, or maintain?</p>
+          <p class="example"><em>Example: "I want career growth but also stability with my partner. I'm worried about damaging my relationship or missing this opportunity."</em></p>
+        </div>
+
+        <p><strong>Tip:</strong> Don't worry about having it all figured out—that's what this tool is for. Just give us the pieces you can see, and we'll help you spot the patterns.</p>
+      </div>
+
+      <div id="interpretPanel" class="panel">
+        <h2>Interpretation</h2>
+        <p>Here's what your scores mean and what to look for in each dimension.</p>
+        <div class="interpret-block">
+          <h3>Continuity</h3>
+          <p><strong>High (0.7–1.0):</strong> This situation supports your long-term direction. Things are holding together well over time.</p>
+          <p><strong>Medium (0.4–0.6):</strong> There's some stability, but also some tension. Parts of this align with your goals, while others might pull you off track.</p>
+          <p><strong>Low (0.0–0.3):</strong> This situation conflicts with your longer-term commitments. You might be feeling fragmented or pulled in different directions.</p>
+        </div>
+        <div class="interpret-block">
+          <h3>Differentiation</h3>
+          <p><strong>High:</strong> Roles and responsibilities are well-defined. Everyone knows what's theirs to handle.</p>
+          <p><strong>Medium:</strong> Some boundaries are clear, others are fuzzy. There may be areas where it's unclear who's responsible for what.</p>
+          <p><strong>Low:</strong> Roles are tangled or unclear. Responsibilities might be overlapping in confusing ways, or boundaries are getting crossed.</p>
+        </div>
+        <div class="interpret-block">
+          <h3>Contextual Fit</h3>
+          <p><strong>High:</strong> Your approach matches the reality of the situation. What you're doing makes sense given the actual circumstances.</p>
+          <p><strong>Medium:</strong> Partial match—some aspects fit, but timing or certain constraints might be off. Reality and expectations don't fully align.</p>
+          <p><strong>Low:</strong> There's a mismatch between what you're trying to do and what the situation actually allows or needs right now.</p>
+        </div>
+        <div class="interpret-block">
+          <h3>Accountability</h3>
+          <p><strong>High:</strong> Causes and effects are clear. You can see who's responsible for what and trace how decisions lead to outcomes.</p>
+          <p><strong>Medium:</strong> Some things are transparent, but other parts are murky. You might be missing some information or clarity about consequences.</p>
+          <p><strong>Low:</strong> Important information is hidden or unclear. It's hard to tell who's responsible or what the real consequences will be.</p>
+        </div>
+        <div class="interpret-block">
+          <h3>Reflexivity</h3>
+          <p><strong>High:</strong> There's room to learn and adjust as you go. You can change course without major risk if needed.</p>
+          <p><strong>Medium:</strong> Some flexibility exists, but there are constraints. Adjusting might be possible but not easy.</p>
+          <p><strong>Low:</strong> The situation feels rigid or locked in. Making changes seems risky or difficult, and there's little room for learning as you go.</p>
+        </div>
+        <div class="interpret-block">
+          <h3>Reading Your Results</h3>
+          <p><strong>Mostly high scores:</strong> The situation has good structural support. You have room to move forward with clarity.</p>
+          <p><strong>Mixed scores:</strong> Pay attention to the lower-scoring areas—they show where things might get stuck or create tension. Consider what would help clarify those dimensions.</p>
+          <p><strong>Mostly low scores:</strong> The situation has structural challenges. Take time to understand what's off before pushing forward. Small adjustments might help things hold together better.</p>
+        </div>
+      </div>
+    </aside>
+
+    <div id="app">
+      <h1>Relational Coherence Navigator</h1>
+
+      <textarea id="inputText" placeholder="Describe your situation here..."></textarea>
+
+      <button id="evaluateBtn">Evaluate</button>
+
+      <div id="status" aria-live="polite"></div>
+
+      <section id="results">
+        <div class="results-main">
+          <div class="text-block">
+            <h3>Dimension Notes</h3>
+            <div id="explanationsList" class="explanations"></div>
+          </div>
+
+          <div class="text-block">
+            <h3>Summary</h3>
+            <p id="summaryText">No results yet.</p>
+          </div>
+
+          <div class="text-block">
+            <h3>Recommendations</h3>
+            <ul id="recommendationsList"></ul>
+          </div>
+
+          <div class="text-block" id="questionsBlock" style="display: none;">
+            <h3>Need More Information</h3>
+            <p class="questions-prompt">These details would help provide more accurate scores. Add them to your description above and click Evaluate again:</p>
+            <ul id="questionsList" class="questions-list"></ul>
+          </div>
+        </div>
+
+        <aside class="results-sidebar">
+          <h2>Scores</h2>
+          <div id="scoreBars" class="score-bars"></div>
+          
+          <div id="compositeScore" class="composite-score">
+            <h3>Overall Coherence</h3>
+            <div class="composite-value">
+              <span class="composite-number">—</span>
+              <span class="composite-label">Not yet evaluated</span>
+            </div>
+            <p class="composite-description">Provide a situation description to see the overall structural assessment.</p>
+          </div>
+        </aside>
+      </section>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
