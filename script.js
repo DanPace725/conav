@@ -14,6 +14,7 @@ window.addEventListener("DOMContentLoaded", function () {
   setupThemeToggle();
   setupQuickForm();
   setupExportDialog();
+  setupHistory();
 });
 
 async function loadEnv() {
@@ -137,6 +138,7 @@ async function evaluateCoherence() {
     renderResults(parsed);
     lastResult = parsed;
     setExportAvailability(true);
+    saveToHistory(text, parsed);
     setStatus("Evaluation complete.");
   } catch (err) {
     setStatus("Error: " + err);
@@ -703,6 +705,116 @@ function exportEvaluation(format) {
   downloadBlob(blob, `${baseName}.${format}`);
   setStatus(`Exported as .${format}`);
   closeExportModal();
+}
+
+/* History Management */
+
+function setupHistory() {
+  renderHistoryList();
+
+  const clearBtn = document.getElementById("clearHistoryBtn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      if (confirm("Are you sure you want to clear all history?")) {
+        localStorage.removeItem("coherence_history");
+        renderHistoryList();
+      }
+    });
+  }
+}
+
+function getHistory() {
+  try {
+    const raw = localStorage.getItem("coherence_history");
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error("Failed to parse history", e);
+    return [];
+  }
+}
+
+function saveToHistory(text, result) {
+  const history = getHistory();
+  const newItem = {
+    id: Date.now().toString(),
+    timestamp: new Date().toISOString(),
+    text: text,
+    result: result
+  };
+
+  // Prepend new item, keep max 50
+  history.unshift(newItem);
+  if (history.length > 50) history.pop();
+
+  localStorage.setItem("coherence_history", JSON.stringify(history));
+  renderHistoryList();
+}
+
+function deleteHistoryItem(id, event) {
+  event.stopPropagation(); // Prevent loading the item when clicking delete
+  const history = getHistory().filter(item => item.id !== id);
+  localStorage.setItem("coherence_history", JSON.stringify(history));
+  renderHistoryList();
+}
+
+function loadHistoryItem(id) {
+  const history = getHistory();
+  const item = history.find(i => i.id === id);
+  if (!item) return;
+
+  document.getElementById("inputText").value = item.text;
+  lastResult = item.result;
+  renderResults(item.result);
+  setExportAvailability(true);
+
+  // If on mobile/small screen, close sidebar after loading
+  if (window.innerWidth <= 900) {
+     const layout = document.getElementById("layout");
+     if (layout) layout.classList.add("sidebar-collapsed");
+  }
+
+  setStatus(`Loaded evaluation from ${new Date(item.timestamp).toLocaleDateString()}`);
+}
+
+function renderHistoryList() {
+  const container = document.getElementById("historyList");
+  if (!container) return;
+
+  const history = getHistory();
+  container.innerHTML = "";
+
+  if (history.length === 0) {
+    container.innerHTML = '<p class="empty-msg">No past evaluations found.</p>';
+    return;
+  }
+
+  history.forEach(item => {
+    const date = new Date(item.timestamp);
+    const dateStr = date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const div = document.createElement("div");
+    div.className = "history-item";
+    div.onclick = () => loadHistoryItem(item.id);
+
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+    meta.textContent = dateStr;
+
+    const preview = document.createElement("div");
+    preview.className = "history-preview";
+    preview.textContent = item.text;
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "delete-item-btn";
+    delBtn.innerHTML = "×";
+    delBtn.title = "Delete";
+    delBtn.onclick = (e) => deleteHistoryItem(item.id, e);
+
+    div.appendChild(delBtn);
+    div.appendChild(meta);
+    div.appendChild(preview);
+    container.appendChild(div);
+  });
 }
 
 function buildCommonLines(result) {
