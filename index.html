@@ -146,7 +146,10 @@
 
       <textarea id="inputText" placeholder="Describe your situation here..."></textarea>
 
-      <button id="evaluateBtn">Evaluate</button>
+      <div class="action-row">
+        <button id="evaluateBtn">Evaluate</button>
+        <button id="exportBtn" class="secondary-btn export-btn" disabled>Export</button>
+      </div>
 
       <div id="status" aria-live="polite"></div>
 
@@ -188,6 +191,28 @@
           </div>
         </aside>
       </section>
+    </div>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop"></div>
+
+  <div id="exportModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Export Evaluation</h3>
+        <button class="icon-btn" id="closeExport" aria-label="Close export dialog">×</button>
+      </div>
+      <p class="modal-description">Choose a format to save your current evaluation.</p>
+      <div class="radio-group">
+        <label><input type="radio" name="exportFormat" value="txt" checked> Text (.txt)</label>
+        <label><input type="radio" name="exportFormat" value="md"> Markdown (.md)</label>
+        <label><input type="radio" name="exportFormat" value="pdf"> PDF (.pdf)</label>
+      </div>
+      <p class="modal-hint">Export includes scores, notes, summary, recommendations, and clarifying questions.</p>
+      <div class="modal-actions">
+        <button id="confirmExport" class="primary-action">Export</button>
+        <button id="cancelExport" class="secondary-btn">Close</button>
+      </div>
     </div>
   </div>
 
