@@ -55,6 +55,12 @@ async function loadProfile() {
 
 async function evaluateCoherence() {
   const text = document.getElementById("inputText").value;
+
+  if (!text || text.trim().length < 10) {
+    setStatus("Error: Please provide more detail (at least 10 characters).");
+    return;
+  }
+
   setStatus("Evaluating...");
   clearResults();
 
@@ -150,10 +156,16 @@ function buildPrompt(userInput, profile) {
   return `
 You are a relational coherence evaluator speaking directly to the user (use "you/your" language).
 Use only these five dimensions: Continuity, Differentiation, Contextual Fit, Accountability, Reflexivity.
-Use the provided profile for definitions and markers.
 
 Coherence profile:
 ${profileText}
+
+Specific Guidance for Dimensions:
+- Continuity: Look for coherence over time. Do NOT interpret continuity as rigidity; it is about stable identity, not resisting change.
+- Differentiation: Look for role clarity and boundaries. Treat it as healthy separation, not isolation.
+- Contextual Fit: Focus on appropriateness to the specific situation described, not general moral judgment.
+- Accountability: Focus on clarity of cause-and-effect and transparency. Do NOT moralize or assign blame.
+- Reflexivity: Look for safe adjustability and feedback loops. Do NOT interpret it as chaotic change.
 
 Return ONLY valid JSON in the following structure:
 {
@@ -216,8 +228,97 @@ function clearResults() {
   const questionsBlock = document.getElementById("questionsBlock");
   if (questionsBlock) questionsBlock.style.display = "none";
 
+  const radar = document.getElementById("radarChart");
+  if (radar) radar.innerHTML = "";
+
   lastResult = null;
   setExportAvailability(false);
+}
+
+function renderRadarChart(scores) {
+  const container = document.getElementById("radarChart");
+  if (!container) return;
+
+  const width = 280;
+  const height = 260;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = 90;
+
+  const dimCount = DIMENSIONS.length;
+  const angleSlice = (Math.PI * 2) / dimCount;
+
+  // Create SVG
+  let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+
+  // Draw background pentagons (grid)
+  for (let level = 5; level > 0; level--) {
+    const levelRadius = (radius / 5) * level;
+    let points = "";
+    for (let i = 0; i < dimCount; i++) {
+      const angle = i * angleSlice - Math.PI / 2; // Start from top
+      const x = centerX + levelRadius * Math.cos(angle);
+      const y = centerY + levelRadius * Math.sin(angle);
+      points += `${x},${y} `;
+    }
+    // Check theme for stroke color
+    const isLight = document.body.classList.contains("light-mode");
+    const gridColor = isLight ? "#e0e0e0" : "#404040";
+    svg += `<polygon points="${points}" fill="none" stroke="${gridColor}" stroke-width="1" />`;
+  }
+
+  // Draw axes
+  for (let i = 0; i < dimCount; i++) {
+    const angle = i * angleSlice - Math.PI / 2;
+    const x = centerX + radius * Math.cos(angle);
+    const y = centerY + radius * Math.sin(angle);
+    const isLight = document.body.classList.contains("light-mode");
+    const axisColor = isLight ? "#e0e0e0" : "#404040";
+
+    svg += `<line x1="${centerX}" y1="${centerY}" x2="${x}" y2="${y}" stroke="${axisColor}" stroke-width="1" />`;
+
+    // Labels
+    const labelRadius = radius + 20;
+    const labelX = centerX + labelRadius * Math.cos(angle);
+    const labelY = centerY + labelRadius * Math.sin(angle);
+    const label = capitalize(DIMENSIONS[i].replace(/_/g, " "));
+
+    // Adjust text anchor based on position
+    let anchor = "middle";
+    if (Math.abs(labelX - centerX) > 10) {
+      anchor = labelX > centerX ? "start" : "end";
+    }
+
+    // Simple adjustment for Y to avoid overlapping
+    let dy = "0.3em";
+    if (labelY < centerY) dy = "0";
+    if (labelY > centerY) dy = "0.8em";
+
+    const textColor = isLight ? "#555555" : "#b0b0b0";
+    svg += `<text x="${labelX}" y="${labelY}" text-anchor="${anchor}" fill="${textColor}" font-size="10" dy="${dy}">${label}</text>`;
+  }
+
+  // Draw data polygon
+  let dataPoints = "";
+  let circles = "";
+
+  for (let i = 0; i < dimCount; i++) {
+    const dim = DIMENSIONS[i];
+    const score = clampScore(scores[dim]);
+    const r = score * radius;
+    const angle = i * angleSlice - Math.PI / 2;
+    const x = centerX + r * Math.cos(angle);
+    const y = centerY + r * Math.sin(angle);
+    dataPoints += `${x},${y} `;
+
+    circles += `<circle cx="${x}" cy="${y}" r="4" fill="#2ab7ca" />`;
+  }
+
+  svg += `<polygon points="${dataPoints}" fill="rgba(42, 183, 202, 0.3)" stroke="#2ab7ca" stroke-width="2" />`;
+  svg += circles;
+  svg += `</svg>`;
+
+  container.innerHTML = svg;
 }
 
 function renderResults(result) {
@@ -231,7 +332,21 @@ function renderResults(result) {
 
       const label = document.createElement("div");
       label.className = "score-label";
-      label.textContent = dim.replace(/_/g, " ");
+
+      const labelText = document.createElement("span");
+      labelText.textContent = dim.replace(/_/g, " ");
+      label.appendChild(labelText);
+
+      // Add info icon
+      const infoIcon = document.createElement("span");
+      infoIcon.className = "info-icon";
+      infoIcon.textContent = "ℹ";
+      infoIcon.title = cachedProfile?.dimensions?.[dim]?.description || "Dimension info";
+      infoIcon.style.cursor = "help";
+      infoIcon.style.marginLeft = "6px";
+      infoIcon.style.fontSize = "0.8em";
+      infoIcon.style.color = "var(--accent-primary)";
+      label.appendChild(infoIcon);
 
       const track = document.createElement("div");
       track.className = "score-track";
@@ -254,6 +369,8 @@ function renderResults(result) {
       bars.appendChild(row);
     });
   }
+
+  renderRadarChart(scores);
 
   // Calculate and render composite score
   renderCompositeScore(scores);

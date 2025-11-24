@@ -921,3 +921,30 @@ button {
     font-size: 1.5em;
   }
 }
+
+/* Radar Chart */
+.radar-chart {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.radar-chart svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.radar-chart text {
+  font-family: sans-serif;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+body.light-mode .radar-chart text {
+  fill: #555555;
+}
+
+body.light-mode .radar-chart polygon[stroke="#404040"],
+body.light-mode .radar-chart line[stroke="#404040"] {
+  stroke: #e0e0e0;
+}
