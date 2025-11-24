@@ -1,5 +1,6 @@
 const DIMENSIONS = ["continuity", "differentiation", "contextual_fit", "accountability", "reflexivity"];
 let cachedProfile = null;
+let lastResult = null;
 
 window.addEventListener("DOMContentLoaded", function () {
   const btn = document.getElementById("evaluateBtn");
@@ -12,6 +13,7 @@ window.addEventListener("DOMContentLoaded", function () {
   setupSidebarCollapse();
   setupThemeToggle();
   setupQuickForm();
+  setupExportDialog();
 });
 
 async function loadEnv() {
@@ -127,9 +129,13 @@ async function evaluateCoherence() {
     }
 
     renderResults(parsed);
+    lastResult = parsed;
+    setExportAvailability(true);
     setStatus("Evaluation complete.");
   } catch (err) {
     setStatus("Error: " + err);
+    lastResult = null;
+    setExportAvailability(false);
   }
 }
 
@@ -209,6 +215,9 @@ function clearResults() {
   if (recList) recList.innerHTML = "";
   const questionsBlock = document.getElementById("questionsBlock");
   if (questionsBlock) questionsBlock.style.display = "none";
+
+  lastResult = null;
+  setExportAvailability(false);
 }
 
 function renderResults(result) {
@@ -495,4 +504,213 @@ function setupQuickForm() {
       }
     });
   }
+}
+
+function setupExportDialog() {
+  const exportBtn = document.getElementById("exportBtn");
+  const confirmBtn = document.getElementById("confirmExport");
+  const cancelBtn = document.getElementById("cancelExport");
+  const closeBtn = document.getElementById("closeExport");
+  const modal = document.getElementById("exportModal");
+  const backdrop = document.getElementById("modalBackdrop");
+
+  if (!exportBtn || !modal || !backdrop) return;
+
+  setExportAvailability(Boolean(lastResult));
+
+  exportBtn.addEventListener("click", () => {
+    if (!lastResult) {
+      setStatus("Run an evaluation before exporting.");
+      return;
+    }
+    openExportModal();
+  });
+
+  confirmBtn?.addEventListener("click", () => {
+    const format = getSelectedExportFormat();
+    exportEvaluation(format);
+  });
+
+  [cancelBtn, closeBtn].forEach((btn) => btn?.addEventListener("click", closeExportModal));
+  backdrop.addEventListener("click", closeExportModal);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeExportModal();
+  });
+}
+
+function setExportAvailability(isEnabled) {
+  const exportBtn = document.getElementById("exportBtn");
+  if (exportBtn) exportBtn.disabled = !isEnabled;
+}
+
+function openExportModal() {
+  const modal = document.getElementById("exportModal");
+  const backdrop = document.getElementById("modalBackdrop");
+  modal?.classList.add("open");
+  backdrop?.classList.add("visible");
+}
+
+function closeExportModal() {
+  const modal = document.getElementById("exportModal");
+  const backdrop = document.getElementById("modalBackdrop");
+  modal?.classList.remove("open");
+  backdrop?.classList.remove("visible");
+}
+
+function getSelectedExportFormat() {
+  const selected = document.querySelector('input[name="exportFormat"]:checked');
+  return selected?.value || "txt";
+}
+
+function exportEvaluation(format) {
+  if (!lastResult) {
+    setStatus("Run an evaluation before exporting.");
+    closeExportModal();
+    return;
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const baseName = `coherence-evaluation-${timestamp}`;
+
+  let blob;
+  if (format === "md") {
+    blob = new Blob([buildMarkdown(lastResult)], { type: "text/markdown" });
+  } else if (format === "pdf") {
+    const pdfText = createPdfDocument(buildCommonLines(lastResult));
+    blob = new Blob([pdfText], { type: "application/pdf" });
+  } else {
+    blob = new Blob([buildPlainText(lastResult)], { type: "text/plain" });
+  }
+
+  downloadBlob(blob, `${baseName}.${format}`);
+  setStatus(`Exported as .${format}`);
+  closeExportModal();
+}
+
+function buildCommonLines(result) {
+  const scores = result.scores || {};
+  const explanations = result.explanations || {};
+  const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
+  const questions = Array.isArray(result.clarifying_questions) ? result.clarifying_questions : [];
+  const timestamp = new Date().toLocaleString();
+
+  const lines = [
+    "Relational Coherence Evaluation",
+    `Generated: ${timestamp}`,
+    "",
+    "Scores:",
+  ];
+
+  DIMENSIONS.forEach((dim) => {
+    const raw = scores[dim];
+    const scoreText = Number.isFinite(raw) ? raw.toFixed(2) : "--";
+    lines.push(`- ${capitalize(dim.replace(/_/g, " "))}: ${scoreText} (${scoreBand(raw)})`);
+  });
+
+  lines.push("", "Summary:", result.summary || "No summary provided.");
+
+  lines.push("", "Dimension Notes:");
+  DIMENSIONS.forEach((dim) => {
+    const label = capitalize(dim.replace(/_/g, " "));
+    lines.push(`* ${label}: ${explanations[dim] || "No explanation provided."}`);
+  });
+
+  lines.push("", "Recommendations:");
+  if (recommendations.length === 0) {
+    lines.push("- No recommendations provided.");
+  } else {
+    recommendations.forEach((rec) => lines.push(`- ${rec}`));
+  }
+
+  lines.push("", "Clarifying Questions:");
+  if (questions.length === 0) {
+    lines.push("- None.");
+  } else {
+    questions.forEach((q) => lines.push(`- ${q}`));
+  }
+
+  return lines;
+}
+
+function buildPlainText(result) {
+  return buildCommonLines(result).join("\n");
+}
+
+function buildMarkdown(result) {
+  const scores = result.scores || {};
+  const explanations = result.explanations || {};
+  const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
+  const questions = Array.isArray(result.clarifying_questions) ? result.clarifying_questions : [];
+  const timestamp = new Date().toLocaleString();
+
+  const lines = [
+    "# Relational Coherence Evaluation",
+    `Generated: ${timestamp}`,
+    "",
+    "## Scores",
+  ];
+
+  DIMENSIONS.forEach((dim) => {
+    const raw = scores[dim];
+    const scoreText = Number.isFinite(raw) ? raw.toFixed(2) : "--";
+    lines.push(`- **${capitalize(dim.replace(/_/g, " "))}:** ${scoreText} (${scoreBand(raw)})`);
+  });
+
+  lines.push("", "## Summary", result.summary || "No summary provided.");
+
+  lines.push("", "## Dimension Notes");
+  DIMENSIONS.forEach((dim) => {
+    const label = capitalize(dim.replace(/_/g, " "));
+    lines.push(`- **${label}:** ${explanations[dim] || "No explanation provided."}`);
+  });
+
+  lines.push("", "## Recommendations");
+  if (recommendations.length === 0) {
+    lines.push("- No recommendations provided.");
+  } else {
+    recommendations.forEach((rec) => lines.push(`- ${rec}`));
+  }
+
+  lines.push("", "## Clarifying Questions");
+  if (questions.length === 0) {
+    lines.push("- None.");
+  } else {
+    questions.forEach((q) => lines.push(`- ${q}`));
+  }
+
+  return lines.join("\n");
+}
+
+function createPdfDocument(lines) {
+  const sanitized = lines.map((line) => line.replace(/([()\\])/g, "\\$1"));
+  const contentParts = ["BT", "/F1 12 Tf", "72 760 Td"];
+
+  sanitized.forEach((line, index) => {
+    if (index > 0) contentParts.push("0 -16 Td");
+    contentParts.push(`(${line}) Tj`);
+  });
+
+  contentParts.push("ET");
+  const contentStream = contentParts.join("\n");
+  const contentLength = contentStream.length;
+
+  return `%PDF-1.4\n` +
+    `1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n` +
+    `2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n` +
+    `3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n` +
+    `4 0 obj<</Length ${contentLength}>>stream\n${contentStream}\nendstream\nendobj\n` +
+    `5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n` +
+    `trailer<</Root 1 0 R/Size 5>>\n%%EOF`;
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
