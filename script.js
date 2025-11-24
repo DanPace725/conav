@@ -14,6 +14,7 @@ window.addEventListener("DOMContentLoaded", function () {
   setupThemeToggle();
   setupQuickForm();
   setupExportDialog();
+  setupHistory();
 });
 
 async function loadEnv() {
@@ -55,6 +56,12 @@ async function loadProfile() {
 
 async function evaluateCoherence() {
   const text = document.getElementById("inputText").value;
+
+  if (!text || text.trim().length < 10) {
+    setStatus("Error: Please provide more detail (at least 10 characters).");
+    return;
+  }
+
   setStatus("Evaluating...");
   clearResults();
 
@@ -131,6 +138,7 @@ async function evaluateCoherence() {
     renderResults(parsed);
     lastResult = parsed;
     setExportAvailability(true);
+    saveToHistory(text, parsed);
     setStatus("Evaluation complete.");
   } catch (err) {
     setStatus("Error: " + err);
@@ -150,10 +158,16 @@ function buildPrompt(userInput, profile) {
   return `
 You are a relational coherence evaluator speaking directly to the user (use "you/your" language).
 Use only these five dimensions: Continuity, Differentiation, Contextual Fit, Accountability, Reflexivity.
-Use the provided profile for definitions and markers.
 
 Coherence profile:
 ${profileText}
+
+Specific Guidance for Dimensions:
+- Continuity: Look for coherence over time. Do NOT interpret continuity as rigidity; it is about stable identity, not resisting change.
+- Differentiation: Look for role clarity and boundaries. Treat it as healthy separation, not isolation.
+- Contextual Fit: Focus on appropriateness to the specific situation described, not general moral judgment.
+- Accountability: Focus on clarity of cause-and-effect and transparency. Do NOT moralize or assign blame.
+- Reflexivity: Look for safe adjustability and feedback loops. Do NOT interpret it as chaotic change.
 
 Return ONLY valid JSON in the following structure:
 {
@@ -216,8 +230,97 @@ function clearResults() {
   const questionsBlock = document.getElementById("questionsBlock");
   if (questionsBlock) questionsBlock.style.display = "none";
 
+  const radar = document.getElementById("radarChart");
+  if (radar) radar.innerHTML = "";
+
   lastResult = null;
   setExportAvailability(false);
+}
+
+function renderRadarChart(scores) {
+  const container = document.getElementById("radarChart");
+  if (!container) return;
+
+  const width = 280;
+  const height = 260;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = 90;
+
+  const dimCount = DIMENSIONS.length;
+  const angleSlice = (Math.PI * 2) / dimCount;
+
+  // Create SVG
+  let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+
+  // Draw background pentagons (grid)
+  for (let level = 5; level > 0; level--) {
+    const levelRadius = (radius / 5) * level;
+    let points = "";
+    for (let i = 0; i < dimCount; i++) {
+      const angle = i * angleSlice - Math.PI / 2; // Start from top
+      const x = centerX + levelRadius * Math.cos(angle);
+      const y = centerY + levelRadius * Math.sin(angle);
+      points += `${x},${y} `;
+    }
+    // Check theme for stroke color
+    const isLight = document.body.classList.contains("light-mode");
+    const gridColor = isLight ? "#e0e0e0" : "#404040";
+    svg += `<polygon points="${points}" fill="none" stroke="${gridColor}" stroke-width="1" />`;
+  }
+
+  // Draw axes
+  for (let i = 0; i < dimCount; i++) {
+    const angle = i * angleSlice - Math.PI / 2;
+    const x = centerX + radius * Math.cos(angle);
+    const y = centerY + radius * Math.sin(angle);
+    const isLight = document.body.classList.contains("light-mode");
+    const axisColor = isLight ? "#e0e0e0" : "#404040";
+
+    svg += `<line x1="${centerX}" y1="${centerY}" x2="${x}" y2="${y}" stroke="${axisColor}" stroke-width="1" />`;
+
+    // Labels
+    const labelRadius = radius + 20;
+    const labelX = centerX + labelRadius * Math.cos(angle);
+    const labelY = centerY + labelRadius * Math.sin(angle);
+    const label = capitalize(DIMENSIONS[i].replace(/_/g, " "));
+
+    // Adjust text anchor based on position
+    let anchor = "middle";
+    if (Math.abs(labelX - centerX) > 10) {
+      anchor = labelX > centerX ? "start" : "end";
+    }
+
+    // Simple adjustment for Y to avoid overlapping
+    let dy = "0.3em";
+    if (labelY < centerY) dy = "0";
+    if (labelY > centerY) dy = "0.8em";
+
+    const textColor = isLight ? "#555555" : "#b0b0b0";
+    svg += `<text x="${labelX}" y="${labelY}" text-anchor="${anchor}" fill="${textColor}" font-size="10" dy="${dy}">${label}</text>`;
+  }
+
+  // Draw data polygon
+  let dataPoints = "";
+  let circles = "";
+
+  for (let i = 0; i < dimCount; i++) {
+    const dim = DIMENSIONS[i];
+    const score = clampScore(scores[dim]);
+    const r = score * radius;
+    const angle = i * angleSlice - Math.PI / 2;
+    const x = centerX + r * Math.cos(angle);
+    const y = centerY + r * Math.sin(angle);
+    dataPoints += `${x},${y} `;
+
+    circles += `<circle cx="${x}" cy="${y}" r="4" fill="#2ab7ca" />`;
+  }
+
+  svg += `<polygon points="${dataPoints}" fill="rgba(42, 183, 202, 0.3)" stroke="#2ab7ca" stroke-width="2" />`;
+  svg += circles;
+  svg += `</svg>`;
+
+  container.innerHTML = svg;
 }
 
 function renderResults(result) {
@@ -231,7 +334,21 @@ function renderResults(result) {
 
       const label = document.createElement("div");
       label.className = "score-label";
-      label.textContent = dim.replace(/_/g, " ");
+
+      const labelText = document.createElement("span");
+      labelText.textContent = dim.replace(/_/g, " ");
+      label.appendChild(labelText);
+
+      // Add info icon
+      const infoIcon = document.createElement("span");
+      infoIcon.className = "info-icon";
+      infoIcon.textContent = "ℹ";
+      infoIcon.title = cachedProfile?.dimensions?.[dim]?.description || "Dimension info";
+      infoIcon.style.cursor = "help";
+      infoIcon.style.marginLeft = "6px";
+      infoIcon.style.fontSize = "0.8em";
+      infoIcon.style.color = "var(--accent-primary)";
+      label.appendChild(infoIcon);
 
       const track = document.createElement("div");
       track.className = "score-track";
@@ -254,6 +371,8 @@ function renderResults(result) {
       bars.appendChild(row);
     });
   }
+
+  renderRadarChart(scores);
 
   // Calculate and render composite score
   renderCompositeScore(scores);
@@ -586,6 +705,116 @@ function exportEvaluation(format) {
   downloadBlob(blob, `${baseName}.${format}`);
   setStatus(`Exported as .${format}`);
   closeExportModal();
+}
+
+/* History Management */
+
+function setupHistory() {
+  renderHistoryList();
+
+  const clearBtn = document.getElementById("clearHistoryBtn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      if (confirm("Are you sure you want to clear all history?")) {
+        localStorage.removeItem("coherence_history");
+        renderHistoryList();
+      }
+    });
+  }
+}
+
+function getHistory() {
+  try {
+    const raw = localStorage.getItem("coherence_history");
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error("Failed to parse history", e);
+    return [];
+  }
+}
+
+function saveToHistory(text, result) {
+  const history = getHistory();
+  const newItem = {
+    id: Date.now().toString(),
+    timestamp: new Date().toISOString(),
+    text: text,
+    result: result
+  };
+
+  // Prepend new item, keep max 50
+  history.unshift(newItem);
+  if (history.length > 50) history.pop();
+
+  localStorage.setItem("coherence_history", JSON.stringify(history));
+  renderHistoryList();
+}
+
+function deleteHistoryItem(id, event) {
+  event.stopPropagation(); // Prevent loading the item when clicking delete
+  const history = getHistory().filter(item => item.id !== id);
+  localStorage.setItem("coherence_history", JSON.stringify(history));
+  renderHistoryList();
+}
+
+function loadHistoryItem(id) {
+  const history = getHistory();
+  const item = history.find(i => i.id === id);
+  if (!item) return;
+
+  document.getElementById("inputText").value = item.text;
+  lastResult = item.result;
+  renderResults(item.result);
+  setExportAvailability(true);
+
+  // If on mobile/small screen, close sidebar after loading
+  if (window.innerWidth <= 900) {
+     const layout = document.getElementById("layout");
+     if (layout) layout.classList.add("sidebar-collapsed");
+  }
+
+  setStatus(`Loaded evaluation from ${new Date(item.timestamp).toLocaleDateString()}`);
+}
+
+function renderHistoryList() {
+  const container = document.getElementById("historyList");
+  if (!container) return;
+
+  const history = getHistory();
+  container.innerHTML = "";
+
+  if (history.length === 0) {
+    container.innerHTML = '<p class="empty-msg">No past evaluations found.</p>';
+    return;
+  }
+
+  history.forEach(item => {
+    const date = new Date(item.timestamp);
+    const dateStr = date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const div = document.createElement("div");
+    div.className = "history-item";
+    div.onclick = () => loadHistoryItem(item.id);
+
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+    meta.textContent = dateStr;
+
+    const preview = document.createElement("div");
+    preview.className = "history-preview";
+    preview.textContent = item.text;
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "delete-item-btn";
+    delBtn.innerHTML = "×";
+    delBtn.title = "Delete";
+    delBtn.onclick = (e) => deleteHistoryItem(item.id, e);
+
+    div.appendChild(delBtn);
+    div.appendChild(meta);
+    div.appendChild(preview);
+    container.appendChild(div);
+  });
 }
 
 function buildCommonLines(result) {

@@ -19,8 +19,19 @@
     <aside id="sidebar">
       <div class="toggle">
         <button class="toggle-btn" data-target="aboutPanel">About</button>
-        <button class="toggle-btn" data-target="guidePanel">How to Use</button>
+        <button class="toggle-btn" data-target="historyPanel">History</button>
+        <button class="toggle-btn" data-target="guidePanel">Guide</button>
         <button class="toggle-btn" data-target="interpretPanel">Scores</button>
+      </div>
+
+      <div id="historyPanel" class="panel">
+        <div class="panel-header">
+          <h2>History</h2>
+          <button id="clearHistoryBtn" class="text-btn" title="Clear all history">Clear</button>
+        </div>
+        <div id="historyList" class="history-list">
+          <p class="empty-msg">No past evaluations found.</p>
+        </div>
       </div>
 
       <div id="aboutPanel" class="panel open">
@@ -179,6 +190,7 @@
 
         <aside class="results-sidebar">
           <h2>Scores</h2>
+          <div id="radarChart" class="radar-chart"></div>
           <div id="scoreBars" class="score-bars"></div>
           
           <div id="compositeScore" class="composite-score">
