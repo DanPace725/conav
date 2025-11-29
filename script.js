@@ -1,6 +1,8 @@
 const DIMENSIONS = ["continuity", "differentiation", "contextual_fit", "accountability", "reflexivity"];
 let cachedProfile = null;
 let lastResult = null;
+let supabaseClient = null;
+let supabaseConfigPromise = null;
 
 window.addEventListener("DOMContentLoaded", function () {
   const btn = document.getElementById("evaluateBtn");
@@ -41,6 +43,43 @@ async function loadEnv() {
   }
 }
 
+async function loadSupabaseConfig() {
+  if (supabaseConfigPromise) return supabaseConfigPromise;
+
+  supabaseConfigPromise = (async () => {
+    // Try serverless config first (production), fall back to local .env parsing
+    const remoteConfig = await tryFetchJson("/api/env");
+    const urlFromRemote = remoteConfig?.supabaseUrl || remoteConfig?.SUPABASE_URL;
+    const anonFromRemote = remoteConfig?.supabaseAnonKey || remoteConfig?.SUPABASE_ANON_KEY;
+    if (urlFromRemote && anonFromRemote) {
+      return { url: urlFromRemote, anonKey: anonFromRemote };
+    }
+
+    const env = await loadEnv();
+    const urlFromEnv = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonFromEnv = env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (urlFromEnv && anonFromEnv) {
+      return { url: urlFromEnv, anonKey: anonFromEnv };
+    }
+
+    return null;
+  })();
+
+  return supabaseConfigPromise;
+}
+
+async function tryFetchJson(path) {
+  try {
+    const res = await fetch(path);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn(`Could not fetch ${path}`, err);
+    return null;
+  }
+}
+
 async function loadProfile() {
   if (cachedProfile) return cachedProfile;
   try {
@@ -52,6 +91,43 @@ async function loadProfile() {
     console.error("Failed to load profile", err);
     return null;
   }
+}
+
+async function getSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+  if (!window.supabase) return null;
+
+  const config = await loadSupabaseConfig();
+  if (!config) return null;
+
+  supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+  return supabaseClient;
+}
+
+function getLocalUserId() {
+  const storageKey = "conav_user_id";
+  const existing = localStorage.getItem(storageKey);
+  if (existing) return existing;
+
+  const newId = (crypto?.randomUUID?.() || Date.now().toString());
+  localStorage.setItem(storageKey, newId);
+  return newId;
+}
+
+async function ensureUserRecord(client) {
+  const userId = getLocalUserId();
+  try {
+    const { error } = await client
+      .from("users")
+      .upsert({ id: userId }, { onConflict: "id" });
+
+    if (error) {
+      console.warn("Supabase user upsert failed", error);
+    }
+  } catch (err) {
+    console.warn("Supabase user upsert threw", err);
+  }
+  return userId;
 }
 
 async function evaluateCoherence() {
@@ -74,58 +150,34 @@ async function evaluateCoherence() {
   const prompt = buildPrompt(text, profile);
 
   try {
-    // Try Vercel serverless function first (production), fall back to direct API (local dev)
-    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    
-    let response, data;
+    // Use .env file and direct API call
+    const env = await loadEnv();
+    const apiKey = env.OPENAI_API_KEY || env.API_KEY;
 
-    if (isProduction) {
-      // Use Vercel serverless function
-      response = await fetch("/api/evaluate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ prompt })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setStatus(`Error: ${errorData.error || 'API request failed'}`);
-        return;
-      }
-
-      data = await response.json();
-    } else {
-      // Local development: use .env file and direct API call
-      const env = await loadEnv();
-      const apiKey = env.OPENAI_API_KEY || env.API_KEY;
-
-      if (!apiKey) {
-        setStatus("Error: Missing OPENAI_API_KEY in .env file");
-        return;
-      }
-
-      response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.2
-        })
-      });
-
-      if (!response.ok) {
-        setStatus("Error: API request failed");
-        return;
-      }
-
-      data = await response.json();
+    if (!apiKey) {
+      setStatus("Error: Missing OPENAI_API_KEY in .env file");
+      return;
     }
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2
+      })
+    });
+
+    if (!response.ok) {
+      setStatus("Error: API request failed");
+      return;
+    }
+
+    const data = await response.json();
 
     const textOutput = data.choices?.[0]?.message?.content ?? "{}";
     const parsed = tryParseJson(textOutput);
@@ -139,6 +191,7 @@ async function evaluateCoherence() {
     lastResult = parsed;
     setExportAvailability(true);
     saveToHistory(text, parsed);
+    persistEvaluation(text, parsed);
     setStatus("Evaluation complete.");
   } catch (err) {
     setStatus("Error: " + err);
@@ -446,6 +499,22 @@ function clampScore(value) {
   return num;
 }
 
+function sanitizeScores(rawScores) {
+  const clean = {};
+  DIMENSIONS.forEach((dim) => {
+    const num = Number(rawScores?.[dim]);
+    if (Number.isFinite(num)) {
+      clean[dim] = clampScore(num);
+    }
+  });
+  return clean;
+}
+
+function sanitizeRecommendations(rawRecs) {
+  if (!Array.isArray(rawRecs)) return [];
+  return rawRecs.filter((item) => typeof item === "string" && item.trim().length > 0);
+}
+
 function scoreBand(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return "Low";
@@ -528,16 +597,22 @@ function setupThemeToggle() {
 }
 
 
+function calculateCompositeScore(scores) {
+  const validScores = DIMENSIONS
+    .map((dim) => clampScore(scores[dim]))
+    .filter((value) => Number.isFinite(value));
+
+  if (validScores.length === 0) return null;
+
+  return validScores.reduce((sum, val) => sum + val, 0) / validScores.length;
+}
+
 function renderCompositeScore(scores) {
   const compositeBox = document.getElementById("compositeScore");
   if (!compositeBox) return;
 
-  // Calculate average of all dimension scores
-  const validScores = DIMENSIONS.map(dim => clampScore(scores[dim])).filter(v => Number.isFinite(v));
-  
-  if (validScores.length === 0) return;
-
-  const composite = validScores.reduce((sum, val) => sum + val, 0) / validScores.length;
+  const composite = calculateCompositeScore(scores);
+  if (!Number.isFinite(composite)) return;
   
   // Determine band and interpretation
   const band = getCompositeBand(composite);
@@ -705,6 +780,37 @@ function exportEvaluation(format) {
   downloadBlob(blob, `${baseName}.${format}`);
   setStatus(`Exported as .${format}`);
   closeExportModal();
+}
+
+async function persistEvaluation(inputText, evaluation) {
+  const client = await getSupabaseClient();
+  if (!client) return;
+
+  const userId = await ensureUserRecord(client);
+  const scores = sanitizeScores(evaluation?.scores || {});
+  const recommendations = sanitizeRecommendations(evaluation?.recommendations);
+  const composite = calculateCompositeScore(scores);
+
+  const payload = {
+    id: crypto?.randomUUID?.() || Date.now().toString(),
+    user_id: userId,
+    input_text: inputText,
+    scores,
+    composite: Number.isFinite(composite) ? composite : null,
+    notes: evaluation?.explanations || {},
+    summary: evaluation?.summary || null,
+    recommendations,
+    context_used: evaluation?.context_used || null
+  };
+
+  try {
+    const { error } = await client.from("evaluations").insert(payload);
+    if (error) {
+      console.warn("Supabase evaluation insert failed", error);
+    }
+  } catch (err) {
+    console.warn("Supabase evaluation insert threw", err);
+  }
 }
 
 /* History Management */
